@@ -13,11 +13,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: one narrow column, phone first. Score meter on top, tap strip, two big buttons, results chart below. Same family look as Multitask Myth. */
+/* Layout: one narrow column, phone first. Score meter on top, tap strip, two big buttons, then score status card, results chart, and science. */
 :root{
   --bg:#EDF0F5; --panel:#FFFFFF; --ink:#141B2D; --muted:#5A6378; --line:#D5DAE4;
   --left:#2F45C8; --left-bg:#E3E7FB; --right:#C2580E; --right-bg:#FBEBDD;
-  --bot:#C62D3A; --bot-bg:#FBE3E5; --you:#1C7A4E; --you-bg:#DDF2E7; --band:#DCE1EB;
+  --bot:#C62D3A; --bot-bg:#FBE3E5; --you:#1C7A4E; --band:#DCE1EB;
+  --bad:#C62D3A; --bad-bg:#FBE3E5; --good:#1C7A4E;
   --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -25,11 +26,13 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0F1320; --panel:#181D2D; --ink:#E8EBF3; --muted:#9AA2B6; --line:#2B3246;
   --left:#9BABFF; --left-bg:#222B52; --right:#F2A35E; --right-bg:#3D2715;
-  --bot:#FF7F88; --bot-bg:#43191E; --you:#5FD39A; --you-bg:#163526; --band:#252C40; color-scheme:dark}}
+  --bot:#FF7F88; --bot-bg:#43191E; --you:#5FD39A; --band:#252C40;
+  --bad:#FF7F88; --bad-bg:#43191E; --good:#5FD39A; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0F1320; --panel:#181D2D; --ink:#E8EBF3; --muted:#9AA2B6; --line:#2B3246;
   --left:#9BABFF; --left-bg:#222B52; --right:#F2A35E; --right-bg:#3D2715;
-  --bot:#FF7F88; --bot-bg:#43191E; --you:#5FD39A; --you-bg:#163526; --band:#252C40; color-scheme:dark}
+  --bot:#FF7F88; --bot-bg:#43191E; --you:#5FD39A; --band:#252C40;
+  --bad:#FF7F88; --bad-bg:#43191E; --good:#5FD39A; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--f-body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
@@ -37,6 +40,9 @@ body{background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--f-body);
 h1{font:700 34px/1 var(--f-display);letter-spacing:-0.02em;margin:0;text-wrap:balance}
 h1 .b{color:var(--bot)}
 .tag{color:var(--muted);font-size:14px;margin:6px 0 0}
+.dur{font:500 12px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0 0}
+.back{font-size:13px;color:var(--muted);text-decoration:none}
+.back:hover{text-decoration:underline}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px}
 .score{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .sc{background:var(--bg);border-radius:10px;padding:10px 12px;min-width:0}
@@ -45,7 +51,7 @@ h1 .b{color:var(--bot)}
 .meter{position:relative;height:14px;border-radius:7px;background:var(--bg);overflow:hidden}
 .meter i{position:absolute;left:0;top:0;bottom:0;width:50%;background:var(--bot);border-radius:7px;transition:width .25s}
 .meter .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
-.mlab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px}
+.mlab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px;gap:6px}
 .status{font:500 15px var(--f-body);min-height:24px;text-align:center}
 .status.hit{color:var(--bot)} .status.miss{color:var(--you)}
 .strip{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:3px}
@@ -74,26 +80,56 @@ h2{font:700 22px/1.2 var(--f-display);margin:0;text-wrap:balance}
 .st small{display:block;font-size:12px;color:var(--muted)}
 .st b{font:500 20px var(--f-mono);font-variant-numeric:tabular-nums}
 .st span{display:block;font-size:12px;color:var(--muted)}
-.hist{font:400 13px var(--f-mono);font-variant-numeric:tabular-nums;width:100%;border-collapse:collapse}
-.hist td,.hist th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right}
-.hist th{font:500 11px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.hist td:first-child,.hist th:first-child{text-align:left}
-details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
-summary{cursor:pointer;font:700 17px var(--f-display)}
-details p{font-size:15px;margin:10px 0 0;max-width:62ch}
-details p b,.sci b{font-weight:500}
-.sci-h{font:700 16px/1.3 var(--f-display);margin:18px 0 0;padding-top:14px;border-top:1px solid var(--line)}
-.sci{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:10px;font-size:15px;max-width:62ch}
-.sci span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
-.foot{font-size:12px;color:var(--muted);text-align:center}
-.dur{font:500 12px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0 0}
-.back{font-size:13px;color:var(--muted);text-decoration:none}
-.back:hover{text-decoration:underline}
 .plain{background:var(--bg);border-radius:12px;padding:14px 16px}
 .plain h3{font:700 17px/1.3 var(--f-display);margin:0 0 4px}
 .plain p{margin:8px 0 0;font-size:15px;max-width:62ch}
 .plain p b{font-weight:500}
+.hist{font:400 13px var(--f-mono);font-variant-numeric:tabular-nums;width:100%;border-collapse:collapse}
+.hist td,.hist th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right}
+.hist th{font:500 11px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hist td:first-child,.hist th:first-child{text-align:left}
+.hist .old{color:var(--muted)}
+details.sci-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+details.sci-box>summary{cursor:pointer;font:700 17px var(--f-display)}
+details.sci-box p{font-size:15px;margin:10px 0 0;max-width:62ch}
+details.sci-box p b{font-weight:500}
+.sci-h{font:700 16px/1.3 var(--f-display);margin:18px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+.foot{font-size:12px;color:var(--muted);text-align:center}
 @media (prefers-reduced-motion:reduce){.meter i,.pad{transition:none}}
+.ml-quitbar{display:flex;justify-content:flex-end;align-items:center;gap:10px;min-height:40px}
+.ml-quit{position:relative;overflow:hidden;height:38px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);font:500 13px var(--f-body);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.ml-quit i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--bad-bg,var(--line));z-index:0}
+.ml-quit span{position:relative;z-index:1}
+.ml-quit.holding{color:var(--bad,var(--ink));border-color:var(--bad,var(--ink))}
+.ml-quit-hint{font-size:12px;color:var(--muted)}
+.ml-status{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.ml-status h2{font:700 20px/1.2 var(--f-display);margin:0;text-wrap:balance}
+.ml-status p{margin:0;font-size:15px;max-width:62ch}
+.ml-status p b{font-weight:500}
+.ml-pill{display:inline-block;font:500 12px var(--f-body);padding:2px 10px;border-radius:999px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.ml-pill.ok{color:var(--good,var(--ink));border-color:currentColor}
+.ml-meter{height:6px;border-radius:3px;background:var(--bg);overflow:hidden}
+.ml-meter i{display:block;height:100%;background:var(--ink);border-radius:3px}
+.ml-trend{width:100%;height:auto;display:block}
+.ml-trend text{font:400 11px var(--f-body);fill:var(--muted)}
+.ml-link{background:none;border:0;padding:4px 0;color:var(--muted);font:400 13px var(--f-body);text-decoration:underline;cursor:pointer;align-self:flex-start}
+.ml-confirm{display:flex;flex-direction:column;gap:10px;font-size:14px}
+.ml-confirm-row{display:flex;gap:8px}
+.ml-btn{height:42px;padding:0 18px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);font:500 14px var(--f-body);cursor:pointer}
+.ml-btn.danger{background:var(--bad,#C62D3A);border-color:var(--bad,#C62D3A);color:var(--panel)}
+.ml-btn:focus-visible,.ml-link:focus-visible,.ml-quit:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ml-src{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+.ml-src li{overflow-wrap:anywhere}
+.ml-src .n{font-family:var(--f-mono);color:var(--ink)}
+.ml-src a{color:inherit}
+sup.c{font-size:11px;line-height:0}
+sup.c a{color:var(--muted);text-decoration:none}
+.howto{background:transparent!important;border:0!important;padding:0!important}
+.howto summary{font:500 14px var(--f-body)!important;color:var(--muted)}
+.howto p{font-size:14px!important;margin:8px 0 0!important}
+.rule{margin:0;font-size:16px}
+.rule b{font-weight:500}
+
 </style>
 
 <div class="wrap">
@@ -101,10 +137,18 @@ details p b,.sci b{font-weight:500}
   <header>
     <h1>Beat the <span class="b">Predictor</span></h1>
     <p class="tag">Tap left or right as randomly as you can. It will try to guess you.</p>
-      <p class="dur">About 2 minutes</p>
+    <p class="dur">About 2 minutes</p>
   </header>
 
+  <p class="rule"><b>Tap left or right 100 times, as randomly as you can.</b></p>
+  <details class="howto"><summary>How to play</summary>
+    <p>Before every tap, a small program locks in a guess about which side you'll pick. You can't see the guess until you tap. Your goal is to be so random that it guesses right only about half the time, which is what blind guessing gets.</p>
+    <p>It learns from what you did after your last few taps. It knows nothing else about you.</p>
+    <p>On a computer, use F for left and J for right. To stop partway, hold the Quit button for one second, or press Esc twice.</p>
+  </details>
+
   <section class="panel" aria-live="polite">
+    <div class="ml-quitbar" id="quitbar" hidden><span class="ml-quit-hint"></span><button class="ml-quit" id="quit" type="button"><i></i><span>Hold to quit</span></button></div>
     <div class="score">
       <div class="sc"><small>It guessed</small><b id="pct">--%</b></div>
       <div class="sc"><small>Taps</small><b id="taps">0/100</b></div>
@@ -112,7 +156,7 @@ details p b,.sci b{font-weight:500}
     </div>
     <div>
       <div class="meter"><i id="bar"></i><span class="mid"></span></div>
-      <div class="mlab"><span>You're winning</span><span>50% = pure chance</span><span>It's winning</span></div>
+      <div class="mlab"><span>You're winning</span><span>50% = blind guessing</span><span>It's winning</span></div>
     </div>
     <div class="status" id="status">Start tapping. Every tap, it guesses first.</div>
     <div class="strip" id="strip"></div>
@@ -125,25 +169,25 @@ details p b,.sci b{font-weight:500}
       <button class="pad L" id="padL" aria-label="Left">Left<small>or F key</small></button>
       <button class="pad R" id="padR" aria-label="Right">Right<small>or J key</small></button>
     </div>
-    <button class="btn ghost" id="restart">Start over</button>
   </section>
+
+  <section class="ml-status" id="mlstatus"></section>
 
   <section class="panel" id="results" hidden>
     <h2 id="verdict"></h2>
     <p class="note" id="meaning"></p>
-    <svg class="chart" id="chart" viewBox="0 0 480 220" role="img" aria-label="Guess rate over your taps, with the range pure chance would produce"></svg>
+    <svg class="chart" id="chart" viewBox="0 0 480 220" role="img" aria-label="Guess rate over your taps, with the range blind guessing would produce"></svg>
     <div class="legend">
       <span><i class="sw" style="background:var(--bot)"></i>Its guess rate on you</span>
       <span id="coinKey" hidden><i class="sw" style="background:var(--muted)"></i>Same program against a coin</span>
-      <span><i class="sw" style="background:var(--band)"></i>Range a coin lands in 95% of the time</span>
+      <span><i class="sw" style="background:var(--band)"></i>Where a coin lands 95% of the time</span>
     </div>
     <div class="stats">
       <div class="st"><small>How often you switched</small><b id="swr"></b><span>A coin switches about 50% of the time</span></div>
       <div class="st"><small>Your longest streak</small><b id="run"></b><span>A coin's is usually 5 to 10</span></div>
       <div class="st"><small>Left vs right</small><b id="bal"></b><span>A coin is close to 50/50</span></div>
-      <div class="st"><small>Coin vs same program</small><b id="coin">--</b><span>Tap below to run it</span></div>
+      <div class="st"><small>Toward your settled score</small><b id="prog"></b><span id="progSub"></span></div>
     </div>
-    <p class="note" id="pattern"></p>
     <div class="plain">
       <h3>What this means, in plain English</h3>
       <div id="plain"></div>
@@ -154,59 +198,130 @@ details p b,.sci b{font-weight:500}
     </div>
     <div id="histWrap" hidden>
       <table class="hist"><thead><tr><th>Run</th><th>Guessed</th><th>Switched</th><th>Streak</th></tr></thead><tbody id="hist"></tbody></table>
-      <p class="note" id="histAvg" style="margin-top:8px"></p>
+      <p class="note" id="histNote" style="margin-top:8px"></p>
     </div>
   </section>
 
-  <details>
-    <summary>How it reads you</summary>
-    <p><b>It only remembers patterns.</b> The program doesn't know anything about you. It keeps a tally of what you tapped after every combination of your last few taps. Then it bets you'll do what you usually do after that combination.</p>
-    <p><b>Why that works.</b> When people try to be random, they follow hidden rules. The most common one is switching too often. A real coin repeats itself all the time, so long streaks feel wrong to us and we break them up. The program picks up on that.</p>
-    <p><b>How to read your score.</b> Guessing blindly, it would be right about half the time. The shaded area on the chart is where a coin's score lands 95 times out of 100. If your line ends above it, the program found real patterns in you, not luck.</p>
-    <p><b>What this can't tell you.</b> One game of 100 taps is a small sample. The history table is more reliable than a single run. A score near 50% also doesn't prove you were random. It only means this program, with its short memory, couldn't find a pattern.</p>
+  <details class="sci-box">
+    <summary>The science behind this game</summary>
+    <h3 class="sci-h" style="border:0;padding-top:0">What it measures</h3>
+    <p>This game measures how predictable you are when you try to be random. The main score is how often a simple program guessed your next tap. Blind guessing gets 50%. Anything reliably above 50% means you have habits the program can learn.</p>
+    <p><b>How the program works.</b> It keeps a tally of what you tapped after each pattern of your last one, two, or three taps. It also tracks whether you tend to balance left and right. Before each tap it goes with whichever of these has been guessing best so far.</p>
+    <p><b>How this compares to the lab.</b> Researchers usually describe human "random" sequences with statistics, such as how often people repeat or switch and how balanced their choices are <sup class="c"><a href="#src6">[6]</a></sup>. This game reports two of those (your switch rate and longest streak) next to the program's score. One study used a statistical model to predict people's "random" choices and could predict about 60% of a sequence <sup class="c"><a href="#src7">[7]</a></sup>. That study used a different model and typed 0s and 1s, so its number is a reference point, not a norm for this game.</p>
 
-    <h3 class="sci-h">The science</h3>
-    <ul class="sci">
-      <li><b>People can't produce randomness on demand.</b> A review of decades of studies found that people asked to make random sequences switch too often and avoid long streaks. Their sequences are too even to be real. <span>Wagenaar, 1972</span></li>
-      <li><b>We expect small samples to look balanced.</b> People believe a short run of coin flips should look like the long-run average, half heads and half tails. A real coin rarely cooperates. Tversky and Kahneman called this belief in the law of small numbers. <span>Tversky and Kahneman, 1971</span></li>
-      <li><b>The gambler's fallacy is the same bias.</b> After several reds in a row, people feel black is due. The wheel has no memory. Your tapping does, and that's what the program exploits.</li>
-      <li><b>The idea behind this game.</b> Computer scientist Scott Aaronson wrote a short program like this one as a student. It counted what people typed after each five-key pattern and predicted most people well above chance. This game uses the same approach.</li>
-      <li><b>Even pros switch too much.</b> Wimbledon servers mixed their serves well enough to win as often as theory predicts. But they still switched direction more often than a random server would. <span>Walker and Wooders, 2001</span></li>
-      <li><b>Feedback can teach it.</b> When people were shown how random their sequences were after each attempt, they learned to produce sequences that passed statistical tests. Without feedback, the bias stays. <span>Neuringer, 1986</span></li>
-      <li><b>Why it matters.</b> The same habits make human passwords guessable and make bluffs and play-calling predictable. Anything you try to vary on purpose, you tend to vary in a pattern.</li>
-    </ul>
-    <p><b>What's still debated.</b> Researchers disagree on why. One view is that we hold a wrong picture of what random looks like. Another is that our memory is too short to track a long sequence, so we balance the last few taps instead. Both likely play a part.</p>
+    <h3 class="sci-h">What the research says</h3>
+    <p><b>People switch too often.</b> People trying to produce random sequences usually switch more often than chance would. They also judge sequences that switch too often as the most random <sup class="c"><a href="#src1">[1]</a></sup>.</p>
+    <p><b>We expect small samples to look balanced.</b> People treat a short random sample as if it should look like the whole population <sup class="c"><a href="#src2">[2]</a></sup>. A real coin often doesn't. It repeats and streaks more than people expect.</p>
+    <p><b>A long line of research.</b> A major review covers how people produce and perceive randomness <sup class="c"><a href="#src3">[3]</a></sup>.</p>
+    <p><b>Even pros switch too much.</b> Top tennis players mixed their serves well enough that they won about equally often on each side, as theory predicts. But even they switched direction too often <sup class="c"><a href="#src5">[5]</a></sup>.</p>
+    <p><b>Feedback can teach it.</b> At first, every participant's sequences differed from random. After seeing feedback from statistical checks, they learned to make sequences those checks couldn't tell apart from a computer's <sup class="c"><a href="#src4">[4]</a></sup>.</p>
+
+    <h3 class="sci-h">Adult norms</h3>
+    <p><b>Switch rate.</b> Across the studies summarized in one review, people trying to be random switched about 58% to 63% of the time, compared with 50% for a truly random sequence <sup class="c"><a href="#src1">[1]</a></sup>. That range is our summary of the studies in that review's table, not a single official norm. This game compares your switch rate with it.</p>
+    <p><b>Prediction score.</b> No published norm exists for this program. The 60% figure above comes from a different method <sup class="c"><a href="#src7">[7]</a></sup>.</p>
+
+    <h3 class="sci-h">What's still debated</h3>
+    <p>Why people make these patterns is not settled. One proposal is that people judge how random a sequence is by how hard it is to describe, so they avoid streaks that look too simple <sup class="c"><a href="#src1">[1]</a></sup>.</p>
+
+    <h3 class="sci-h">Limits of this game</h3>
+    <p><b>One round is noisy.</b> In our simulation of thousands of rounds by players with known habits, a single round's score landed within about ±<span class="luck"></span> points of that player's long-run average 95% of the time. Pooling 10 rounds narrows that to about ±4 points.</p>
+    <p><b>It reads a little low.</b> The program starts each round knowing nothing about you, so it spends early taps learning. In our simulation it scored 1 to 5 points below the best possible prediction for players with simple habits. Against a real coin it scored exactly 50%, so a score above 50% always reflects real patterns.</p>
+    <p><b>Near 50% isn't proof of randomness.</b> It only means this program, with its short memory, didn't find your pattern.</p>
+    <p><b>The simulation is a model.</b> The player habits in it are our assumptions. Your own consistency, shown once you settle, is the better guide for you.</p>
+
+    <h3 class="sci-h">Sources</h3>
+    <ol class="ml-src" id="sources"></ol>
   </details>
 
-  <p class="foot">Based on Wagenaar 1972, Tversky and Kahneman 1971, and the Aaronson oracle.</p>
+  <p class="foot">Scores are saved on this device only. Nothing is sent anywhere.</p>
 </div>
 
 <script>
-(function(){
-  var N=100,K=5;
-  var S;function fresh(){return {seq:[],hit:[],counts:{},pred:null,done:false}}
-  function $(id){return document.getElementById(id)}
+var ML=(function(){
+  function load(k){try{var a=JSON.parse(localStorage.getItem(k)||"[]");return Array.isArray(a)?a:[]}catch(e){return []}}
+  function get(k){try{var v=localStorage.getItem(k);return v==null?null:JSON.parse(v)}catch(e){return null}}
+  function put(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+  function del(k){try{localStorage.removeItem(k)}catch(e){}}
+  function mean(a){if(!a.length)return null;var s=0;a.forEach(function(x){s+=x});return s/a.length}
+  function sd(a){if(a.length<2)return null;var m=mean(a),s=0;a.forEach(function(x){s+=(x-m)*(x-m)});return Math.sqrt(s/(a.length-1))}
+  /* runs are stored newest first. settle() returns a chronological view of the valid rounds. */
+  function settle(runs,N,val,ok){
+    var v=runs.slice().reverse().filter(function(r){return (!ok||ok(r))&&typeof val(r)==="number"&&isFinite(val(r))}).map(val);
+    var n=v.length,o={n:n,N:N,vals:v,need:Math.max(0,N-n),avg:mean(v),latest:n?v[n-1]:null};
+    if(n>=N){var last=v.slice(-N);o.settled=mean(last);o.spread=sd(last);
+      if(n>=2*N){o.firstN=mean(v.slice(0,N));o.latestN=mean(last)}}
+    return o}
+  function plural(n,w){return n+" "+w+(n===1?"":"s")}
+  /* Hold to quit: about 1 second press with a fill bar. Esc twice on a computer. */
+  function holdToQuit(btn,onQuit){
+    var t=null,fill=btn.querySelector("i"),escAt=0,hint=btn.parentNode.querySelector(".ml-quit-hint");
+    function cancel(){if(t){clearTimeout(t);t=null}btn.classList.remove("holding");if(fill)fill.style.transition="none",fill.style.width="0"}
+    function start(e){e.preventDefault();cancel();btn.classList.add("holding");
+      if(fill){void fill.offsetWidth;fill.style.transition="width 1s linear";fill.style.width="100%"}
+      t=setTimeout(function(){t=null;cancel();onQuit()},1000)}
+    btn.addEventListener("pointerdown",start);
+    ["pointerup","pointerleave","pointercancel"].forEach(function(ev){btn.addEventListener(ev,cancel)});
+    btn.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" ")e.preventDefault()});
+    document.addEventListener("keydown",function(e){
+      if(e.key!=="Escape"||btn.closest("[hidden]")||btn.hidden)return;
+      var now=Date.now();
+      if(now-escAt<1500){escAt=0;if(hint)hint.textContent="";onQuit()}
+      else{escAt=now;if(hint){hint.textContent="Press Esc again to quit";setTimeout(function(){if(Date.now()-escAt>=1400)hint.textContent=""},1500)}}})}
+  /* Reset link with an on-page Cancel / Erase confirmation. Only removes the keys given. */
+  function resetLink(wrap,keys,label,onDone){
+    function idle(){wrap.innerHTML='<button class="ml-link" type="button">'+label+'</button>';
+      wrap.firstChild.addEventListener("click",ask)}
+    function ask(){wrap.innerHTML='<div class="ml-confirm"><span>Erase all saved scores for this game on this device? This can\'t be undone.</span><div class="ml-confirm-row"><button class="ml-btn ghost" type="button">Cancel</button><button class="ml-btn danger" type="button">Erase</button></div></div>';
+      var b=wrap.querySelectorAll("button");b[0].addEventListener("click",idle);
+      b[1].addEventListener("click",function(){keys.forEach(del);idle();if(onDone)onDone()})}
+    idle()}
+  function saveSummary(id,o){o.d=Date.now();put("mindlab.summary."+id,o)}
+  function sources(el,list){el.innerHTML=list.map(function(s,i){
+    return '<li id="src'+(i+1)+'"><span class="n">['+(i+1)+']</span> '+s.c+(s.doi?' <a href="https://doi.org/'+s.doi+'" target="_blank" rel="noopener">https://doi.org/'+s.doi+'</a>':'')+'</li>'}).join("")}
+  /* Small trend chart of round scores with the settled band. */
+  function trend(svg,vals,N,fmt,color){
+    var W=480,H=150,L=44,R=12,T=12,B=26;if(!vals.length){svg.innerHTML="";return}
+    var lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals);var pad=(hi-lo)*0.15||Math.abs(hi)*0.1||1;lo-=pad;hi+=pad;
+    function X(i){return vals.length===1?(L+W-R)/2:L+i/(vals.length-1)*(W-L-R)}
+    function Y(v){return T+(hi-v)/(hi-lo)*(H-T-B)}
+    var g="",ticks=[lo,(lo+hi)/2,hi];
+    ticks.forEach(function(v){g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+fmt(v)+'</text>'});
+    if(vals.length>=N){var x0=X(vals.length-N),x1=X(vals.length-1);g+='<rect x="'+(x0-6)+'" y="'+T+'" width="'+(x1-x0+12)+'" height="'+(H-T-B)+'" fill="var(--line)" opacity=".45" rx="6"/>';
+      var m=mean(vals.slice(-N));g+='<line x1="'+(x0-6)+'" x2="'+(x1+6)+'" y1="'+Y(m)+'" y2="'+Y(m)+'" stroke="'+color+'" stroke-width="2" stroke-dasharray="5 4"/>'}
+    g+='<polyline points="'+vals.map(function(v,i){return X(i)+","+Y(v)}).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round"/>';
+    vals.forEach(function(v,i){g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3.5" fill="'+color+'"/>'});
+    g+='<text x="'+L+'" y="'+(H-6)+'">first round</text><text x="'+(W-R)+'" y="'+(H-6)+'" text-anchor="end">latest</text>';
+    svg.innerHTML=g}
+  return {load:load,get:get,put:put,del:del,mean:mean,sd:sd,settle:settle,plural:plural,holdToQuit:holdToQuit,resetLink:resetLink,saveSummary:saveSummary,sources:sources,trend:trend}
+})();
 
-  function predict(seq,counts){
-    for(var k=Math.min(K,seq.length);k>=1;k--){
-      var c=counts[k+":"+seq.slice(-k).join("")];
-      if(c&&c[0]!==c[1])return c[0]>c[1]?"L":"R";
-    }
-    return Math.random()<.5?"L":"R";
-  }
-  function learn(seq,counts,x){
-    for(var k=1;k<=Math.min(K,seq.length);k++){
-      var key=k+":"+seq.slice(-k).join("");
-      if(!counts[key])counts[key]=[0,0];
-      counts[key][x==="L"?0:1]++;
-    }
-  }
-  function play(st,x){
-    var p=st.pred||predict(st.seq,st.counts);
-    st.hit.push(p===x);learn(st.seq,st.counts,x);st.seq.push(x);
-    st.pred=predict(st.seq,st.counts);
-    return p===x;
-  }
+(function(){
+  var KEY="beatpredictor.runs",SUMKEY="mindlab.summary.bp",N=10,TAPS=100,K=3,LUCK=12,MARGIN=4,ROUND_SD=6,KEEP=200,NORM_LO=58,NORM_HI=63;
+  var SOURCES=[
+    {c:"Falk, R., &amp; Konold, C. (1997). Making sense of randomness: Implicit encoding as a basis for judgment. <i>Psychological Review, 104</i>(2), 301&ndash;318.",doi:"10.1037/0033-295X.104.2.301"},
+    {c:"Tversky, A., &amp; Kahneman, D. (1971). Belief in the law of small numbers. <i>Psychological Bulletin, 76</i>(2), 105&ndash;110.",doi:"10.1037/h0031322"},
+    {c:"Nickerson, R. S. (2002). The production and perception of randomness. <i>Psychological Review, 109</i>(2), 330&ndash;357.",doi:"10.1037/0033-295X.109.2.330"},
+    {c:"Neuringer, A. (1986). Can people behave “randomly?”: The role of feedback. <i>Journal of Experimental Psychology: General, 115</i>(1), 62&ndash;75.",doi:"10.1037/0096-3445.115.1.62"},
+    {c:"Walker, M., &amp; Wooders, J. (2001). Minimax play at Wimbledon. <i>American Economic Review, 91</i>(5), 1521&ndash;1538.",doi:"10.1257/aer.91.5.1521"},
+    {c:"Towse, J. N., &amp; Neil, D. (1998). Analyzing human random generation behavior: A review of methods used and a computer program for describing performance. <i>Behavior Research Methods, Instruments, &amp; Computers, 30</i>(4), 583&ndash;591.",doi:"10.3758/BF03209475"},
+    {c:"Shteingart, H., &amp; Loewenstein, Y. (2016). Heterogeneous suppression of sequential effects in random sequence generation, but not in operant learning. <i>PLoS ONE, 11</i>(8), e0157643.",doi:"10.1371/journal.pone.0157643"}
+  ];
+  var S,lastT=null;
+  function $(id){return document.getElementById(id)}
+  function isNew(r){return r&&r.v===2}
+  function val(r){return r.p}
+  /* Predictor: experts are context lengths 1..K (majority of what followed this context before) plus a "balance" expert
+     (the side used less in the last 6 taps). It follows whichever expert has guessed best so far this round. */
+  function fresh(){return {seq:[],hit:[],counts:{},score:new Array(K+1).fill(0),last:null,pred:null,done:false,active:false}}
+  function experts(P){var out=[],s=P.seq;
+    for(var k=1;k<=K;k++){if(s.length<k){out.push(null);continue}var c=P.counts[k+":"+s.slice(-k).join("")];out.push(c&&c[0]!==c[1]?(c[0]>c[1]?"L":"R"):null)}
+    var w=s.slice(-6);if(w.length>=4){var l=w.filter(function(x){return x==="L"}).length;out.push(l*2===w.length?null:(l*2<w.length?"L":"R"))}else out.push(null);
+    return out}
+  function predict(P){var ex=experts(P),best=-1e9,bi=-1;ex.forEach(function(e,i){if(e&&P.score[i]>best){best=P.score[i];bi=i}});
+    P.last=ex;return bi>=0?ex[bi]:(Math.random()<.5?"L":"R")}
+  function learn(P,x){(P.last||[]).forEach(function(e,i){if(e)P.score[i]+=(e===x?1:-1)});
+    for(var k=1;k<=Math.min(K,P.seq.length);k++){var key=k+":"+P.seq.slice(-k).join("");if(!P.counts[key])P.counts[key]=[0,0];P.counts[key][x==="L"?0:1]++}P.seq.push(x)}
+  function play(P,x){var p=P.pred||predict(P);P.hit.push(p===x);learn(P,x);P.pred=predict(P);return p===x}
 
   function strip(){var el=$("strip"),html="";var start=Math.max(0,S.seq.length-40);
     for(var i=0;i<40;i++){var j=start+i;
@@ -214,19 +329,20 @@ details p b,.sci b{font-weight:500}
     el.innerHTML=html}
   function count(a){var n=0;a.forEach(function(v){if(v)n++});return n}
   function draw(){var n=S.seq.length,h=count(S.hit);
-    $("taps").textContent=n+"/"+N;$("hits").textContent=String(h);
+    $("taps").textContent=n+"/"+TAPS;$("hits").textContent=String(h);
     $("pct").textContent=n?Math.round(h/n*100)+"%":"--%";
     $("bar").style.width=(n?h/n*100:50)+"%";
-    $("padL").disabled=$("padR").disabled=S.done;strip()}
+    $("padL").disabled=$("padR").disabled=S.done;$("quitbar").hidden=!S.active;strip()}
 
   function tap(x){
-    if(S.done)return;
+    if(S.done)return;S.active=true;
     var hit=play(S,x),s=$("status");
     s.className="status "+(hit?"hit":"miss");
     s.textContent=hit?"It guessed "+(x==="L"?"left":"right")+".":"It guessed wrong.";
     draw();
-    if(S.seq.length>=N){S.done=true;draw();results()}
-  }
+    if(S.seq.length>=TAPS){S.done=true;S.active=false;draw();results()}}
+  function quit(){S=fresh();S.pred=predict(S);$("status").className="status";$("status").textContent="Round stopped. Nothing was saved.";draw()}
+  ML.holdToQuit($("quit"),quit);
 
   function stats(st){var n=st.seq.length,sw=0,run=1,best=1,l=0;
     for(var i=0;i<n;i++){if(st.seq[i]==="L")l++;
@@ -235,14 +351,14 @@ details p b,.sci b{font-weight:500}
   function tailP(h,n){var lf=[0];for(var i=1;i<=n;i++)lf[i]=lf[i-1]+Math.log(i);
     var p=0;for(var k=h;k<=n;k++)p+=Math.exp(lf[n]-lf[k]-lf[n-k]-n*Math.LN2);return Math.min(1,p)}
   function oneIn(p){if(p<0.001)return "less than 1 time in 1,000";if(p>=0.5)return "about half the time or more";
-    var x=Math.round(1/p);return "about 1 time in "+x.toLocaleString()}
+    return "about 1 time in "+Math.round(1/p).toLocaleString()}
 
   function chart(lines){
     var W=480,H=220,L=36,R=8,T=10,B=24,yMin=20,yMax=90;
-    function X(i){return L+(i-1)/(N-1)*(W-L-R)}
+    function X(i){return L+(i-1)/(TAPS-1)*(W-L-R)}
     function Y(v){v=Math.max(yMin,Math.min(yMax,v));return T+(yMax-v)/(yMax-yMin)*(H-T-B)}
     var g="",up=[],dn=[];
-    for(var i=5;i<=N;i++){var w=1.96*50/Math.sqrt(i);up.push(X(i)+","+Y(50+w));dn.unshift(X(i)+","+Y(50-w))}
+    for(var i=5;i<=TAPS;i++){var w=1.96*50/Math.sqrt(i);up.push(X(i)+","+Y(50+w));dn.unshift(X(i)+","+Y(50-w))}
     g+='<polygon points="'+up.concat(dn).join(" ")+'" fill="var(--band)"/>';
     [30,50,70,90].forEach(function(v){g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+v+'%</text>'});
     g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(50)+'" y2="'+Y(50)+'" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 3"/>';
@@ -252,67 +368,89 @@ details p b,.sci b{font-weight:500}
       var last=pts[pts.length-1].split(",");g+='<circle cx="'+last[0]+'" cy="'+last[1]+'" r="4" fill="'+ln.color+'"/>'});
     $("chart").innerHTML=g}
 
-  var coinRun=null;
-  var lastT=null;
-  function plain(t,coinPct){
-    var pct=Math.round(t.hits/t.n*100),band=Math.round(50+1.96*50/Math.sqrt(N)),p=tailP(t.hits,t.n),out=[];
-    if(pct>=band)out.push("<b>The short version.</b> The program guessed your next tap "+t.hits+" times out of "+t.n+". Guessing blindly, it would get about 50. So your taps weren't as random as they felt. You had habits, and it learned them.");
-    else if(pct>50)out.push("<b>The short version.</b> The program guessed "+t.hits+" of your "+t.n+" taps. That's a little better than blind guessing, but luck alone can produce a score like that. You were hard to read this time.");
-    else out.push("<b>The short version.</b> The program guessed only "+t.hits+" of your "+t.n+" taps, no better than blind guessing. It couldn't find a pattern in you this time.");
-    var where=pct>=band?"ends above the gray area, so the program wasn't just lucky. It found real patterns.":(pct>=Math.round(50-1.96*50/Math.sqrt(N))?"ends inside the gray area, so its score could be luck.":"ends below the gray area, which is unusual. You may have been steering away from your own habits.");
-    out.push("<b>Reading the chart.</b> The red line is the program's score on you as the game went on. The gray area shows where its score would land 95 times out of 100 against a real coin. It starts wide because early on, a few lucky guesses swing the score a lot. It narrows as the taps add up. Your red line "+where);
-    if(pct>50)out.push("<b>The odds.</b> Against a real coin, the program would score this high "+oneIn(p)+". That's a way of asking: how often would pure luck do this well? The rarer it is, the surer you can be that the program really read you.");
+  function plain(t,coinPct,st){
+    var pct=Math.round(t.hits/t.n*100),band=Math.round(50+1.96*50/Math.sqrt(TAPS)),p=tailP(t.hits,t.n),out=[];
+    if(pct>=band)out.push("<b>The short version.</b> The program guessed your next tap "+t.hits+" times out of "+t.n+". Guessing blindly, it would get about 50. Your taps weren't as random as they felt. You had habits, and it learned them.");
+    else if(pct>50)out.push("<b>The short version.</b> The program guessed "+t.hits+" of your "+t.n+" taps. That's a little better than blind guessing, but luck alone can produce a score like that.");
+    else out.push("<b>The short version.</b> The program guessed only "+t.hits+" of your "+t.n+" taps, no better than blind guessing. It didn't find a pattern this round.");
+    out.push("<b>Reading the chart.</b> The red line is the program's score on you as the round went on. The gray area is where its score would land 95 times out of 100 against a real coin. It starts wide because early on a few lucky guesses swing the score a lot. Your red line "+(pct>=band?"ends above the gray area, so it wasn't just luck.":"ends inside the gray area, so this round's score could be luck."));
+    if(pct>50)out.push("<b>The odds.</b> Against a real coin, the program would score this high "+oneIn(p)+". In other words, that's how often pure luck would do this well.");
     var sw=Math.round(t.swr*100);
-    out.push("<b>Switching, "+sw+"%.</b> You switched sides on "+sw+"% of your taps. A coin switches about half the time. "+(sw>=60?"You switched more, which is the most common human habit. Repeating the same side feels un-random, so people avoid it. A coin doesn't care.":(sw<=40?"You repeated more than a coin would. Less common, but still a habit the program can use.":"That's close to a coin, so switching wasn't your tell.")));
-    out.push("<b>Your longest streak, "+t.best+".</b> That's the most times in a row you tapped the same side. In 100 coin flips, the longest streak is usually 5 to 10. "+(t.best<=4?"Yours was shorter, which means you were breaking up runs before they got long. Real randomness has longer streaks than people expect.":(t.best>10?"Yours was longer than usual, which is less common but still a pattern.":"Yours was in the normal range, so streaks weren't your tell.")));
-    var l=t.left,r=t.n-t.left;if(Math.max(l,r)>=60)out.push("<b>Left vs right, "+l+"/"+r+".</b> You favored one side. The program can bet on that alone.");
-    out.push(coinPct===null?"<b>Try the comparison.</b> Tap \"Let a coin play\" below. The same program plays 100 taps against a real coin, and you'll see what an unreadable player scores.":"<b>The coin's score, "+coinPct+"%.</b> The same program, playing a real coin, scored "+coinPct+"%. That's what unreadable looks like. On the chart, the gray line is the coin and the red line is you.");
-    out.push("<b>Why it matters.</b> Any time you try to be unpredictable, the same habits show up. Passwords and PINs people make up. Rock, paper, scissors. When a pitcher or a poker player tries to mix it up. If being unpredictable really matters, don't trust your gut. Use a real random source, like a coin flip or a dice app.");
-    return out.map(function(x){return "<p>"+x+"</p>"}).join("");
-  }
+    out.push("<b>Switching, "+sw+"%.</b> You switched sides on "+sw+"% of your taps. A coin switches about half the time. In research, people trying to be random usually switch about "+NORM_LO+"% to "+NORM_HI+"% of the time. "+(sw>NORM_HI?"You switched even more than that.":(sw>=NORM_LO?"You were right in that typical range.":(sw>=44?"You were closer to a coin than most people.":"You repeated more than a coin would, which is less common."))));
+    out.push("<b>Your longest streak, "+t.best+".</b> That's the most times in a row you tapped the same side. In 100 coin flips, the longest streak is usually 5 to 10. "+(t.best<=4?"Yours was shorter, so you were breaking up runs early. Real randomness has longer streaks than people expect.":(t.best>10?"Yours was longer than usual.":"Yours was in the normal range.")));
+    out.push("<b>How much to trust one round.</b> Luck alone can move one round's score about "+LUCK+" points up or down. Your settled score pools "+N+" rounds and is the one to trust.");
+    out.push(coinPct===null?"<b>Try the comparison.</b> Tap “Let a coin play” below. The same program plays 100 taps against a real coin, so you can see what unreadable looks like.":"<b>The coin's score, "+coinPct+"%.</b> The same program scored "+coinPct+"% against a real coin. On the chart, the gray line is the coin and the red line is you.");
+    return out.map(function(x){return "<p>"+x+"</p>"}).join("")}
+
   function results(){
-    var t=stats(S),pct=Math.round(t.hits/t.n*100),p=tailP(t.hits,t.n),band=Math.round(50+1.96*50/Math.sqrt(N));
+    var t=stats(S),pct=Math.round(t.hits/t.n*100),p=tailP(t.hits,t.n),band=Math.round(50+1.96*50/Math.sqrt(TAPS));
+    var runs=ML.load(KEY);runs.unshift({d:Date.now(),v:2,p:pct,s:Math.round(t.swr*100),b:t.best,l:t.left});runs=runs.slice(0,KEEP);ML.put(KEY,runs);
+    var st=ML.settle(runs,N,val,isNew);
     $("verdict").textContent=pct>=band?"It read you. It guessed "+pct+"% of your taps.":(pct>50?"Close. It guessed "+pct+"% of your taps.":"You beat it. It guessed only "+pct+"% of your taps.");
-    $("meaning").textContent=pct>50?("A coin would let it score this high "+oneIn(p)+". "+(pct>=band?"So this isn't luck. You have patterns it found.":"That's within the range luck can produce, so this run doesn't prove a pattern.")):"That's at or below chance. With its short memory, it couldn't find a pattern in this run.";
-    $("swr").textContent=Math.round(t.swr*100)+"%";$("run").textContent=String(t.best);
-    $("bal").textContent=t.left+"/"+(t.n-t.left);
-    var notes=[];
-    if(t.swr>=0.6)notes.push("You switched "+Math.round(t.swr*100)+"% of the time. That's the classic human pattern: too much switching to be random.");
-    else if(t.swr<=0.4)notes.push("You repeated more than a coin would. Less common, but still a pattern it can use.");
-    if(t.best<=4)notes.push("Your longest streak was only "+t.best+". A coin goes 4 or fewer in a row only about 3% of the time, so you were avoiding streaks.");
-    $("pattern").textContent=notes.join(" ")||"Your switching and streaks looked like a coin's this run.";
-    coinRun=null;$("coin").textContent="--";$("coinKey").hidden=true;$("coinBtn").disabled=false;
+    $("meaning").textContent=pct>50?("A coin would let it score this high "+oneIn(p)+"."):"That's at or below what blind guessing gets.";
+    $("swr").textContent=Math.round(t.swr*100)+"%";$("run").textContent=String(t.best);$("bal").textContent=t.left+"/"+(t.n-t.left);
+    $("prog").textContent=st.settled!=null?"Settled":Math.min(st.n,N)+" of "+N;
+    $("progSub").textContent=st.settled!=null?"Settled score: "+Math.round(st.settled)+"%":ML.plural(st.need,"more round")+" to go";
+    lastT=t;$("plain").innerHTML=plain(t,null,st);
+    $("coinKey").hidden=true;$("coinBtn").textContent="Let a coin play";
     chart([{hit:S.hit,color:"var(--bot)",w:2.5}]);
-    lastT=t;$("plain").innerHTML=plain(t,null);
-    $("results").hidden=false;
-    save({d:Date.now(),p:pct,s:Math.round(t.swr*100),b:t.best});
+    $("results").hidden=false;hist(runs);status();
     $("results").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}
 
   $("coinBtn").addEventListener("click",function(){
-    coinRun=fresh();for(var i=0;i<N;i++)play(coinRun,Math.random()<.5?"L":"R");
-    var c=stats(coinRun);$("coin").textContent=Math.round(c.hits/N*100)+"%";$("coinKey").hidden=false;
-    chart([{hit:coinRun.hit,color:"var(--muted)",w:1.5},{hit:S.hit,color:"var(--bot)",w:2.5}]);
+    var c=fresh();c.pred=predict(c);for(var i=0;i<TAPS;i++)play(c,Math.random()<.5?"L":"R");
+    var cs=stats(c);$("coinKey").hidden=false;
+    chart([{hit:c.hit,color:"var(--muted)",w:1.5},{hit:S.hit,color:"var(--bot)",w:2.5}]);
     $("coinBtn").textContent="Run the coin again";
-    if(lastT)$("plain").innerHTML=plain(lastT,Math.round(c.hits/N*100))});
+    if(lastT)$("plain").innerHTML=plain(lastT,Math.round(cs.hits/TAPS*100))});
 
-  function load(){try{return JSON.parse(localStorage.getItem("beatpredictor.runs")||"[]")}catch(e){return []}}
-  function save(r){var a=load();a.unshift(r);a=a.slice(0,20);try{localStorage.setItem("beatpredictor.runs",JSON.stringify(a))}catch(e){}hist(a)}
+  function normWord(sw){var d=Math.abs(sw-50);return d<NORM_LO-50?"closer":(d<=NORM_HI-50?"typical":"further")}
+  function summaryText(st,sw){
+    if(st.settled!=null)return "A simple program predicted about "+Math.round(st.settled)+"% of your “random” taps, and you switched sides "+Math.round(sw)+"% of the time (people trying to be random typically switch "+NORM_LO+"–"+NORM_HI+"%).";
+    if(st.n)return "A simple program has predicted about "+Math.round(st.avg)+"% of your taps so far. "+ML.plural(st.need,"more round")+" before this score is reliable.";
+    return "Not played yet with the current program."}
+  function status(){
+    var runs=ML.load(KEY),st=ML.settle(runs,N,val,isNew),old=runs.filter(function(r){return !isNew(r)}).length,h="";
+    var recent=runs.filter(isNew).slice(0,Math.min(N,st.n)),sw=ML.mean(recent.map(function(r){return r.s})),bs=ML.mean(recent.map(function(r){return r.b}));
+    if(st.settled==null){
+      h+='<h2>Still settling: '+ML.plural(st.need,"more round")+' before your score is reliable</h2>';
+      h+='<div class="ml-meter"><i style="width:'+(st.n/N*100)+'%"></i></div>';
+      h+='<p>One round can swing about '+LUCK+' points either way from luck alone. Pooling '+N+' rounds narrows that to about ±'+MARGIN+' points.</p>';
+      if(st.n)h+='<p><b>Average so far:</b> the program guessed about '+Math.round(st.avg)+'% of your taps over '+ML.plural(st.n,"round")+'. This is an early read.</p>';
+    }else{
+      var s=Math.round(st.settled),nw=normWord(sw);
+      h+='<h2>What your scores mean so far</h2><p><span class="ml-pill ok">Settled</span> <span class="ml-pill">'+ML.plural(st.n,"round")+' played</span></p>';
+      h+='<p><b>Your settled score: '+s+'%.</b> '+(s>=54?'Out of every 100 taps, the program correctly predicts about '+s+'. Blind guessing would get 50, so your "random" taps have habits it can learn.':'The program does little better than blind guessing on you. You\'re hard to predict.')+' This pools your last '+N+' rounds, so it should be within about ±'+MARGIN+' points of your true level.</p>';
+      h+='<p><b>Compared with adults.</b> You switch sides '+Math.round(sw)+'% of the time. In research, people trying to be random usually switch '+NORM_LO+'% to '+NORM_HI+'%, against 50% for a coin. '+(nw==="closer"?'You\'re closer to a coin than the typical person.':(nw==="typical"?'You\'re in the typical range.':'You\'re further from a coin than the typical person.'))+' There\'s no published norm for the program\'s score itself.</p>';
+      h+='<p><b>Consistency.</b> Your last '+N+' rounds varied by about ±'+ML.plural(Math.round(st.spread),'point')+' around your average. '+(st.spread<ROUND_SD*0.75?'That\'s steadier than luck alone usually allows, so you play very consistently.':(st.spread<=ROUND_SD*1.25?'That\'s about what luck alone produces, so you play steadily.':'That\'s more than luck alone explains, so how you play changes from round to round.'))+'</p>';
+      if(st.firstN!=null){var ch=st.latestN-st.firstN;h+='<p><b>Change over time.</b> Your first '+N+' rounds averaged '+Math.round(st.firstN)+'%. Your latest '+N+' average '+Math.round(st.latestN)+'%. '+(Math.abs(ch)<MARGIN?'That\'s within the margin of luck, so no clear change.':(ch<0?'You\'ve become harder to predict.':'You\'ve become easier to predict.'))+'</p>'}
+      else h+='<p><b>Change over time.</b> After '+(2*N)+' rounds, this will compare your first '+N+' with your latest '+N+'. '+ML.plural(2*N-st.n,"more round")+' to go.</p>';
+      h+='<p><b>Your biggest tell.</b> '+(sw>NORM_LO?'Switching too often. You switch sides more than a coin, so repeating the same side feels un-random to you. Try letting a few streaks happen.':(bs<=4.5?'Avoiding streaks. Your longest streak averages '+bs.toFixed(1)+', while a coin\'s is usually 5 to 10.':'No single obvious tell. The program picks up smaller patterns, like balancing left and right.'))+'</p>'}
+    h+='<svg class="ml-trend" id="trend" viewBox="0 0 480 150" role="img" aria-label="The program\'s score on you each round"></svg>';
+    if(old)h+='<p class="note">'+ML.plural(old,"earlier round")+' used an older version of the program, which read some habits a few points too low. They stay in your history but aren\'t counted here.</p>';
+    h+='<div id="resetWrap"></div>';
+    $("mlstatus").innerHTML=h;
+    ML.trend($("trend"),st.vals,N,function(v){return Math.round(v)+"%"},"var(--bot)");
+    ML.resetLink($("resetWrap"),[KEY,SUMKEY],"Reset my scores",function(){status();hist([]);$("results").hidden=true});
+    var norm=st.settled!=null?{metric:"switch rate",value:Math.round(sw),lo:NORM_LO,hi:NORM_HI,verdict:normWord(sw)==="closer"?"better":(normWord(sw)==="typical"?"typical":"worse"),label:"Typical switch rate when trying to be random: "+NORM_LO+"–"+NORM_HI+"%"}:{label:"Typical switch rate when trying to be random: "+NORM_LO+"–"+NORM_HI+"%"};
+    ML.saveSummary("bp",{settled:st.settled!=null,n:st.n,need:st.need,N:N,score:st.settled!=null?st.settled:st.avg,norm:norm,t:summaryText(st,sw)})}
+
   function hist(a){if(!a.length){$("histWrap").hidden=true;return}$("histWrap").hidden=false;
-    $("hist").innerHTML=a.slice(0,8).map(function(r){var d=new Date(r.d);
-      return "<tr><td>"+(d.getMonth()+1)+"/"+d.getDate()+" "+d.toTimeString().slice(0,5)+"</td><td>"+r.p+"%</td><td>"+r.s+"%</td><td>"+r.b+"</td></tr>"}).join("");
-    var s=0;a.forEach(function(r){s+=r.p});var avg=Math.round(s/a.length);
-    $("histAvg").textContent=a.length>1?("Across your last "+a.length+" games it guessed "+avg+"% on average. Over many games, anything steadily above 55% means it has your number."):"Play a few more games to see your average."}
+    $("hist").innerHTML=a.slice(0,8).map(function(r){var d=new Date(r.d),o=!isNew(r);
+      return "<tr"+(o?' class="old"':'')+"><td>"+(d.getMonth()+1)+"/"+d.getDate()+" "+d.toTimeString().slice(0,5)+(o?" (old)":"")+"</td><td>"+r.p+"%</td><td>"+r.s+"%</td><td>"+r.b+"</td></tr>"}).join("");
+    $("histNote").textContent=a.some(function(r){return !isNew(r)})?"Rows marked old used the earlier program.":""}
 
-  function reset(){S=fresh();S.pred=predict(S.seq,S.counts);$("results").hidden=true;$("status").className="status";
-    $("status").textContent="Start tapping. Every tap, it guesses first.";$("coinBtn").textContent="Let a coin play";draw()}
+  function reset(){S=fresh();S.pred=predict(S);$("results").hidden=true;$("status").className="status";
+    $("status").textContent="Start tapping. Every tap, it guesses first.";draw()}
   $("padL").addEventListener("pointerdown",function(e){e.preventDefault();tap("L")});
   $("padR").addEventListener("pointerdown",function(e){e.preventDefault();tap("R")});
   ["padL","padR"].forEach(function(id){$(id).addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tap(id==="padL"?"L":"R")}})});
   document.addEventListener("keydown",function(e){if(e.repeat||e.metaKey||e.ctrlKey)return;var k=e.key.toLowerCase();
     if(k==="f"||k==="arrowleft"){e.preventDefault();tap("L")}else if(k==="j"||k==="arrowright"){e.preventDefault();tap("R")}});
-  $("restart").addEventListener("click",reset);
   $("again").addEventListener("click",function(){reset();window.scrollTo({top:0})});
-  reset();hist(load());
+  ML.sources($("sources"),SOURCES);
+  [].forEach.call(document.querySelectorAll(".luck"),function(e){e.textContent=LUCK});
+  reset();hist(ML.load(KEY));status();
 })();
 </script>
 
