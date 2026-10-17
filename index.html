@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Beat the Predictor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Try to tap left and right at random. A simple program will try to guess your next move.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow column, phone first. Score meter on top, tap strip, two big buttons, results chart below. Same family look as Multitask Myth. */
+:root{
+  --bg:#EDF0F5; --panel:#FFFFFF; --ink:#141B2D; --muted:#5A6378; --line:#D5DAE4;
+  --left:#2F45C8; --left-bg:#E3E7FB; --right:#C2580E; --right-bg:#FBEBDD;
+  --bot:#C62D3A; --bot-bg:#FBE3E5; --you:#1C7A4E; --you-bg:#DDF2E7; --band:#DCE1EB;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1320; --panel:#181D2D; --ink:#E8EBF3; --muted:#9AA2B6; --line:#2B3246;
+  --left:#9BABFF; --left-bg:#222B52; --right:#F2A35E; --right-bg:#3D2715;
+  --bot:#FF7F88; --bot-bg:#43191E; --you:#5FD39A; --you-bg:#163526; --band:#252C40; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1320; --panel:#181D2D; --ink:#E8EBF3; --muted:#9AA2B6; --line:#2B3246;
+  --left:#9BABFF; --left-bg:#222B52; --right:#F2A35E; --right-bg:#3D2715;
+  --bot:#FF7F88; --bot-bg:#43191E; --you:#5FD39A; --you-bg:#163526; --band:#252C40; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font:700 34px/1 var(--f-display);letter-spacing:-0.02em;margin:0;text-wrap:balance}
+h1 .b{color:var(--bot)}
+.tag{color:var(--muted);font-size:14px;margin:6px 0 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.score{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sc{background:var(--bg);border-radius:10px;padding:10px 12px;min-width:0}
+.sc small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sc b{font:500 22px/1.3 var(--f-mono);font-variant-numeric:tabular-nums}
+.meter{position:relative;height:14px;border-radius:7px;background:var(--bg);overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;width:50%;background:var(--bot);border-radius:7px;transition:width .25s}
+.meter .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+.mlab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px}
+.status{font:500 15px var(--f-body);min-height:24px;text-align:center}
+.status.hit{color:var(--bot)} .status.miss{color:var(--you)}
+.strip{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:3px}
+.cell{aspect-ratio:1;max-width:100%;border-radius:4px;background:var(--bg);position:relative}
+.cell.L{background:var(--left-bg)} .cell.R{background:var(--right-bg)}
+.cell.h::after{content:"";position:absolute;inset:30%;border-radius:50%;background:var(--bot)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.pads{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pad{height:120px;border:0;border-radius:14px;font:700 26px var(--f-display);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .06s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.pad small{font:400 12px var(--f-body);opacity:.8}
+.pad:active{transform:scale(.97)}
+.pad.L{background:var(--left-bg);color:var(--left)} .pad.R{background:var(--right-bg);color:var(--right)}
+.pad:focus-visible,.btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.pad:disabled{opacity:.45;cursor:default}
+.btn{height:48px;border-radius:12px;border:0;background:var(--ink);color:var(--bg);font:500 16px var(--f-body);cursor:pointer;width:100%}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.row{display:flex;gap:8px}
+h2{font:700 22px/1.2 var(--f-display);margin:0;text-wrap:balance}
+.note{font-size:14px;color:var(--muted);margin:0}
+.chart{width:100%;height:auto;display:block}
+.chart text{font:400 11px var(--f-body);fill:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.st{background:var(--bg);border-radius:10px;padding:10px 12px;min-width:0}
+.st small{display:block;font-size:12px;color:var(--muted)}
+.st b{font:500 20px var(--f-mono);font-variant-numeric:tabular-nums}
+.st span{display:block;font-size:12px;color:var(--muted)}
+.hist{font:400 13px var(--f-mono);font-variant-numeric:tabular-nums;width:100%;border-collapse:collapse}
+.hist td,.hist th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right}
+.hist th{font:500 11px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hist td:first-child,.hist th:first-child{text-align:left}
+details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+summary{cursor:pointer;font:700 17px var(--f-display)}
+details p{font-size:15px;margin:10px 0 0;max-width:62ch}
+details p b,.sci b{font-weight:500}
+.sci-h{font:700 16px/1.3 var(--f-display);margin:18px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+.sci{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:10px;font-size:15px;max-width:62ch}
+.sci span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.foot{font-size:12px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:reduce){.meter i,.pad{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Beat the <span class="b">Predictor</span></h1>
+    <p class="tag">Tap left or right as randomly as you can. It will try to guess you.</p>
+  </header>
+
+  <section class="panel" aria-live="polite">
+    <div class="score">
+      <div class="sc"><small>It guessed</small><b id="pct">--%</b></div>
+      <div class="sc"><small>Taps</small><b id="taps">0/100</b></div>
+      <div class="sc"><small>Right guesses</small><b id="hits">0</b></div>
+    </div>
+    <div>
+      <div class="meter"><i id="bar"></i><span class="mid"></span></div>
+      <div class="mlab"><span>You're winning</span><span>50% = pure chance</span><span>It's winning</span></div>
+    </div>
+    <div class="status" id="status">Start tapping. Every tap, it guesses first.</div>
+    <div class="strip" id="strip"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--left-bg)"></i>Left</span>
+      <span><i class="sw" style="background:var(--right-bg)"></i>Right</span>
+      <span><i class="sw" style="background:var(--bot);border-radius:50%"></i>It guessed that tap</span>
+    </div>
+    <div class="pads">
+      <button class="pad L" id="padL" aria-label="Left">Left<small>or F key</small></button>
+      <button class="pad R" id="padR" aria-label="Right">Right<small>or J key</small></button>
+    </div>
+    <button class="btn ghost" id="restart">Start over</button>
+  </section>
+
+  <section class="panel" id="results" hidden>
+    <h2 id="verdict"></h2>
+    <p class="note" id="meaning"></p>
+    <svg class="chart" id="chart" viewBox="0 0 480 220" role="img" aria-label="Guess rate over your taps, with the range pure chance would produce"></svg>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--bot)"></i>Its guess rate on you</span>
+      <span id="coinKey" hidden><i class="sw" style="background:var(--muted)"></i>Same program against a coin</span>
+      <span><i class="sw" style="background:var(--band)"></i>Range a coin lands in 95% of the time</span>
+    </div>
+    <div class="stats">
+      <div class="st"><small>How often you switched</small><b id="swr"></b><span>A coin switches about 50% of the time</span></div>
+      <div class="st"><small>Your longest streak</small><b id="run"></b><span>A coin's is usually 5 to 10</span></div>
+      <div class="st"><small>Left vs right</small><b id="bal"></b><span>A coin is close to 50/50</span></div>
+      <div class="st"><small>Coin vs same program</small><b id="coin">--</b><span>Tap below to run it</span></div>
+    </div>
+    <p class="note" id="pattern"></p>
+    <div class="row">
+      <button class="btn ghost" id="coinBtn">Let a coin play</button>
+      <button class="btn" id="again">Play again</button>
+    </div>
+    <div id="histWrap" hidden>
+      <table class="hist"><thead><tr><th>Run</th><th>Guessed</th><th>Switched</th><th>Streak</th></tr></thead><tbody id="hist"></tbody></table>
+      <p class="note" id="histAvg" style="margin-top:8px"></p>
+    </div>
+  </section>
+
+  <details>
+    <summary>How it reads you</summary>
+    <p><b>It only remembers patterns.</b> The program doesn't know anything about you. It keeps a tally of what you tapped after every combination of your last few taps. Then it bets you'll do what you usually do after that combination.</p>
+    <p><b>Why that works.</b> When people try to be random, they follow hidden rules. The most common one is switching too often. A real coin repeats itself all the time, so long streaks feel wrong to us and we break them up. The program picks up on that.</p>
+    <p><b>How to read your score.</b> Guessing blindly, it would be right about half the time. The shaded area on the chart is where a coin's score lands 95 times out of 100. If your line ends above it, the program found real patterns in you, not luck.</p>
+    <p><b>What this can't tell you.</b> One game of 100 taps is a small sample. The history table is more reliable than a single run. A score near 50% also doesn't prove you were random. It only means this program, with its short memory, couldn't find a pattern.</p>
+
+    <h3 class="sci-h">The science</h3>
+    <ul class="sci">
+      <li><b>People can't produce randomness on demand.</b> A review of decades of studies found that people asked to make random sequences switch too often and avoid long streaks. Their sequences are too even to be real. <span>Wagenaar, 1972</span></li>
+      <li><b>We expect small samples to look balanced.</b> People believe a short run of coin flips should look like the long-run average, half heads and half tails. A real coin rarely cooperates. Tversky and Kahneman called this belief in the law of small numbers. <span>Tversky and Kahneman, 1971</span></li>
+      <li><b>The gambler's fallacy is the same bias.</b> After several reds in a row, people feel black is due. The wheel has no memory. Your tapping does, and that's what the program exploits.</li>
+      <li><b>The idea behind this game.</b> Computer scientist Scott Aaronson wrote a short program like this one as a student. It counted what people typed after each five-key pattern and predicted most people well above chance. This game uses the same approach.</li>
+      <li><b>Even pros switch too much.</b> Wimbledon servers mixed their serves well enough to win as often as theory predicts. But they still switched direction more often than a random server would. <span>Walker and Wooders, 2001</span></li>
+      <li><b>Feedback can teach it.</b> When people were shown how random their sequences were after each attempt, they learned to produce sequences that passed statistical tests. Without feedback, the bias stays. <span>Neuringer, 1986</span></li>
+      <li><b>Why it matters.</b> The same habits make human passwords guessable and make bluffs and play-calling predictable. Anything you try to vary on purpose, you tend to vary in a pattern.</li>
+    </ul>
+    <p><b>What's still debated.</b> Researchers disagree on why. One view is that we hold a wrong picture of what random looks like. Another is that our memory is too short to track a long sequence, so we balance the last few taps instead. Both likely play a part.</p>
+  </details>
+
+  <p class="foot">Based on Wagenaar 1972, Tversky and Kahneman 1971, and the Aaronson oracle.</p>
+</div>
+
+<script>
+(function(){
+  var N=100,K=5;
+  var S;function fresh(){return {seq:[],hit:[],counts:{},pred:null,done:false}}
+  function $(id){return document.getElementById(id)}
+
+  function predict(seq,counts){
+    for(var k=Math.min(K,seq.length);k>=1;k--){
+      var c=counts[k+":"+seq.slice(-k).join("")];
+      if(c&&c[0]!==c[1])return c[0]>c[1]?"L":"R";
+    }
+    return Math.random()<.5?"L":"R";
+  }
+  function learn(seq,counts,x){
+    for(var k=1;k<=Math.min(K,seq.length);k++){
+      var key=k+":"+seq.slice(-k).join("");
+      if(!counts[key])counts[key]=[0,0];
+      counts[key][x==="L"?0:1]++;
+    }
+  }
+  function play(st,x){
+    var p=st.pred||predict(st.seq,st.counts);
+    st.hit.push(p===x);learn(st.seq,st.counts,x);st.seq.push(x);
+    st.pred=predict(st.seq,st.counts);
+    return p===x;
+  }
+
+  function strip(){var el=$("strip"),html="";var start=Math.max(0,S.seq.length-40);
+    for(var i=0;i<40;i++){var j=start+i;
+      html+=j<S.seq.length?'<div class="cell '+S.seq[j]+(S.hit[j]?" h":"")+'"></div>':'<div class="cell"></div>'}
+    el.innerHTML=html}
+  function count(a){var n=0;a.forEach(function(v){if(v)n++});return n}
+  function draw(){var n=S.seq.length,h=count(S.hit);
+    $("taps").textContent=n+"/"+N;$("hits").textContent=String(h);
+    $("pct").textContent=n?Math.round(h/n*100)+"%":"--%";
+    $("bar").style.width=(n?h/n*100:50)+"%";
+    $("padL").disabled=$("padR").disabled=S.done;strip()}
+
+  function tap(x){
+    if(S.done)return;
+    var hit=play(S,x),s=$("status");
+    s.className="status "+(hit?"hit":"miss");
+    s.textContent=hit?"It guessed "+(x==="L"?"left":"right")+".":"It guessed wrong.";
+    draw();
+    if(S.seq.length>=N){S.done=true;draw();results()}
+  }
+
+  function stats(st){var n=st.seq.length,sw=0,run=1,best=1,l=0;
+    for(var i=0;i<n;i++){if(st.seq[i]==="L")l++;
+      if(i>0){if(st.seq[i]!==st.seq[i-1]){sw++;run=1}else{run++;if(run>best)best=run}}}
+    return {n:n,hits:count(st.hit),swr:sw/(n-1),best:best,left:l}}
+  function tailP(h,n){var lf=[0];for(var i=1;i<=n;i++)lf[i]=lf[i-1]+Math.log(i);
+    var p=0;for(var k=h;k<=n;k++)p+=Math.exp(lf[n]-lf[k]-lf[n-k]-n*Math.LN2);return Math.min(1,p)}
+  function oneIn(p){if(p<0.001)return "less than 1 time in 1,000";if(p>=0.5)return "about half the time or more";
+    var x=Math.round(1/p);return "about 1 time in "+x.toLocaleString()}
+
+  function chart(lines){
+    var W=480,H=220,L=36,R=8,T=10,B=24,yMin=20,yMax=90;
+    function X(i){return L+(i-1)/(N-1)*(W-L-R)}
+    function Y(v){v=Math.max(yMin,Math.min(yMax,v));return T+(yMax-v)/(yMax-yMin)*(H-T-B)}
+    var g="",up=[],dn=[];
+    for(var i=5;i<=N;i++){var w=1.96*50/Math.sqrt(i);up.push(X(i)+","+Y(50+w));dn.unshift(X(i)+","+Y(50-w))}
+    g+='<polygon points="'+up.concat(dn).join(" ")+'" fill="var(--band)"/>';
+    [30,50,70,90].forEach(function(v){g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+v+'%</text>'});
+    g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(50)+'" y2="'+Y(50)+'" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 3"/>';
+    [1,25,50,75,100].forEach(function(t){g+='<text x="'+X(t)+'" y="'+(H-6)+'" text-anchor="middle">'+(t===1?"tap 1":t)+'</text>'});
+    lines.forEach(function(ln){var c=0,pts=[];ln.hit.forEach(function(v,j){if(v)c++;if(j>=4)pts.push(X(j+1)+","+Y(c/(j+1)*100))});
+      g+='<polyline points="'+pts.join(" ")+'" fill="none" stroke="'+ln.color+'" stroke-width="'+ln.w+'" stroke-linejoin="round" stroke-linecap="round"/>';
+      var last=pts[pts.length-1].split(",");g+='<circle cx="'+last[0]+'" cy="'+last[1]+'" r="4" fill="'+ln.color+'"/>'});
+    $("chart").innerHTML=g}
+
+  var coinRun=null;
+  function results(){
+    var t=stats(S),pct=Math.round(t.hits/t.n*100),p=tailP(t.hits,t.n),band=Math.round(50+1.96*50/Math.sqrt(N));
+    $("verdict").textContent=pct>=band?"It read you. It guessed "+pct+"% of your taps.":(pct>50?"Close. It guessed "+pct+"% of your taps.":"You beat it. It guessed only "+pct+"% of your taps.");
+    $("meaning").textContent=pct>50?("A coin would let it score this high "+oneIn(p)+". "+(pct>=band?"So this isn't luck. You have patterns it found.":"That's within the range luck can produce, so this run doesn't prove a pattern.")):"That's at or below chance. With its short memory, it couldn't find a pattern in this run.";
+    $("swr").textContent=Math.round(t.swr*100)+"%";$("run").textContent=String(t.best);
+    $("bal").textContent=t.left+"/"+(t.n-t.left);
+    var notes=[];
+    if(t.swr>=0.6)notes.push("You switched "+Math.round(t.swr*100)+"% of the time. That's the classic human pattern: too much switching to be random.");
+    else if(t.swr<=0.4)notes.push("You repeated more than a coin would. Less common, but still a pattern it can use.");
+    if(t.best<=4)notes.push("Your longest streak was only "+t.best+". A coin goes 4 or fewer in a row only about 3% of the time, so you were avoiding streaks.");
+    $("pattern").textContent=notes.join(" ")||"Your switching and streaks looked like a coin's this run.";
+    coinRun=null;$("coin").textContent="--";$("coinKey").hidden=true;$("coinBtn").disabled=false;
+    chart([{hit:S.hit,color:"var(--bot)",w:2.5}]);
+    $("results").hidden=false;
+    save({d:Date.now(),p:pct,s:Math.round(t.swr*100),b:t.best});
+    $("results").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}
+
+  $("coinBtn").addEventListener("click",function(){
+    coinRun=fresh();for(var i=0;i<N;i++)play(coinRun,Math.random()<.5?"L":"R");
+    var c=stats(coinRun);$("coin").textContent=Math.round(c.hits/N*100)+"%";$("coinKey").hidden=false;
+    chart([{hit:coinRun.hit,color:"var(--muted)",w:1.5},{hit:S.hit,color:"var(--bot)",w:2.5}]);
+    $("coinBtn").textContent="Run the coin again"});
+
+  function load(){try{return JSON.parse(localStorage.getItem("beatpredictor.runs")||"[]")}catch(e){return []}}
+  function save(r){var a=load();a.unshift(r);a=a.slice(0,20);try{localStorage.setItem("beatpredictor.runs",JSON.stringify(a))}catch(e){}hist(a)}
+  function hist(a){if(!a.length){$("histWrap").hidden=true;return}$("histWrap").hidden=false;
+    $("hist").innerHTML=a.slice(0,8).map(function(r){var d=new Date(r.d);
+      return "<tr><td>"+(d.getMonth()+1)+"/"+d.getDate()+" "+d.toTimeString().slice(0,5)+"</td><td>"+r.p+"%</td><td>"+r.s+"%</td><td>"+r.b+"</td></tr>"}).join("");
+    var s=0;a.forEach(function(r){s+=r.p});var avg=Math.round(s/a.length);
+    $("histAvg").textContent=a.length>1?("Across your last "+a.length+" games it guessed "+avg+"% on average. Over many games, anything steadily above 55% means it has your number."):"Play a few more games to see your average."}
+
+  function reset(){S=fresh();S.pred=predict(S.seq,S.counts);$("results").hidden=true;$("status").className="status";
+    $("status").textContent="Start tapping. Every tap, it guesses first.";$("coinBtn").textContent="Let a coin play";draw()}
+  $("padL").addEventListener("pointerdown",function(e){e.preventDefault();tap("L")});
+  $("padR").addEventListener("pointerdown",function(e){e.preventDefault();tap("R")});
+  ["padL","padR"].forEach(function(id){$(id).addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tap(id==="padL"?"L":"R")}})});
+  document.addEventListener("keydown",function(e){if(e.repeat||e.metaKey||e.ctrlKey)return;var k=e.key.toLowerCase();
+    if(k==="f"||k==="arrowleft"){e.preventDefault();tap("L")}else if(k==="j"||k==="arrowright"){e.preventDefault();tap("R")}});
+  $("restart").addEventListener("click",reset);
+  $("again").addEventListener("click",function(){reset();window.scrollTo({top:0})});
+  reset();hist(load());
+})();
+</script>
+
+</body>
+</html>
