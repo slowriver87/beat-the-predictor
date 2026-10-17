@@ -41,7 +41,7 @@ h1 .b{color:var(--bot)}
 .score{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .sc{background:var(--bg);border-radius:10px;padding:10px 12px;min-width:0}
 .sc small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.sc b{font:500 22px/1.3 var(--f-mono);font-variant-numeric:tabular-nums}
+.sc b{font:500 clamp(17px,5vw,22px)/1.3 var(--f-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
 .meter{position:relative;height:14px;border-radius:7px;background:var(--bg);overflow:hidden}
 .meter i{position:absolute;left:0;top:0;bottom:0;width:50%;background:var(--bot);border-radius:7px;transition:width .25s}
 .meter .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
@@ -132,7 +132,7 @@ details p b,.sci b{font-weight:500}
       <div class="st"><small>How often you switched</small><b id="swr"></b><span>A coin switches about 50% of the time</span></div>
       <div class="st"><small>Your longest streak</small><b id="run"></b><span>A coin's is usually 5 to 10</span></div>
       <div class="st"><small>Left vs right</small><b id="bal"></b><span>A coin is close to 50/50</span></div>
-      <div class="st"><small>Coin vs same program</small><b id="coin">--</b><span>Tap below to run it</span></div>
+      <div class="st"><small>Coin vs same program</small><b id="coin">--</b><span id="coinNote">Tap below to run it</span></div>
     </div>
     <p class="note" id="pattern"></p>
     <div class="row">
@@ -246,12 +246,12 @@ details p b,.sci b{font-weight:500}
     $("meaning").textContent=pct>50?("A coin would let it score this high "+oneIn(p)+". "+(pct>=band?"So this isn't luck. You have patterns it found.":"That's within the range luck can produce, so this run doesn't prove a pattern.")):"That's at or below chance. With its short memory, it couldn't find a pattern in this run.";
     $("swr").textContent=Math.round(t.swr*100)+"%";$("run").textContent=String(t.best);
     $("bal").textContent=t.left+"/"+(t.n-t.left);
-    var notes=[];
-    if(t.swr>=0.6)notes.push("You switched "+Math.round(t.swr*100)+"% of the time. That's the classic human pattern: too much switching to be random.");
-    else if(t.swr<=0.4)notes.push("You repeated more than a coin would. Less common, but still a pattern it can use.");
+    var notes=[],swp=Math.round(t.swr*100);
+    if(swp>=60)notes.push("You switched "+swp+"% of the time. That's the classic human pattern: too much switching to be random.");
+    else if(swp<=40)notes.push("You repeated more than a coin would. Less common, but still a pattern it can use.");
     if(t.best<=4)notes.push("Your longest streak was only "+t.best+". A coin goes 4 or fewer in a row only about 3% of the time, so you were avoiding streaks.");
     $("pattern").textContent=notes.join(" ")||"Your switching and streaks looked like a coin's this run.";
-    coinRun=null;$("coin").textContent="--";$("coinKey").hidden=true;$("coinBtn").disabled=false;
+    coinRun=null;$("coin").textContent="--";$("coinNote").textContent="Tap below to run it";$("coinKey").hidden=true;$("coinBtn").disabled=false;
     chart([{hit:S.hit,color:"var(--bot)",w:2.5}]);
     $("results").hidden=false;
     save({d:Date.now(),p:pct,s:Math.round(t.swr*100),b:t.best});
@@ -259,7 +259,7 @@ details p b,.sci b{font-weight:500}
 
   $("coinBtn").addEventListener("click",function(){
     coinRun=fresh();for(var i=0;i<N;i++)play(coinRun,Math.random()<.5?"L":"R");
-    var c=stats(coinRun);$("coin").textContent=Math.round(c.hits/N*100)+"%";$("coinKey").hidden=false;
+    var c=stats(coinRun);$("coin").textContent=Math.round(c.hits/N*100)+"%";$("coinNote").textContent="Its guess rate on random coin taps";$("coinKey").hidden=false;
     chart([{hit:coinRun.hit,color:"var(--muted)",w:1.5},{hit:S.hit,color:"var(--bot)",w:2.5}]);
     $("coinBtn").textContent="Run the coin again"});
 
