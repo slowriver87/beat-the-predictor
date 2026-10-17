@@ -41,7 +41,7 @@ h1 .b{color:var(--bot)}
 .score{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .sc{background:var(--bg);border-radius:10px;padding:10px 12px;min-width:0}
 .sc small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.sc b{font:500 clamp(17px,5vw,22px)/1.3 var(--f-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sc b{font:500 22px/1.3 var(--f-mono);font-variant-numeric:tabular-nums}
 .meter{position:relative;height:14px;border-radius:7px;background:var(--bg);overflow:hidden}
 .meter i{position:absolute;left:0;top:0;bottom:0;width:50%;background:var(--bot);border-radius:7px;transition:width .25s}
 .meter .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
@@ -86,6 +86,10 @@ details p b,.sci b{font-weight:500}
 .sci{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:10px;font-size:15px;max-width:62ch}
 .sci span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 .foot{font-size:12px;color:var(--muted);text-align:center}
+.plain{background:var(--bg);border-radius:12px;padding:14px 16px}
+.plain h3{font:700 17px/1.3 var(--f-display);margin:0 0 4px}
+.plain p{margin:8px 0 0;font-size:15px;max-width:62ch}
+.plain p b{font-weight:500}
 @media (prefers-reduced-motion:reduce){.meter i,.pad{transition:none}}
 </style>
 
@@ -132,9 +136,13 @@ details p b,.sci b{font-weight:500}
       <div class="st"><small>How often you switched</small><b id="swr"></b><span>A coin switches about 50% of the time</span></div>
       <div class="st"><small>Your longest streak</small><b id="run"></b><span>A coin's is usually 5 to 10</span></div>
       <div class="st"><small>Left vs right</small><b id="bal"></b><span>A coin is close to 50/50</span></div>
-      <div class="st"><small>Coin vs same program</small><b id="coin">--</b><span id="coinNote">Tap below to run it</span></div>
+      <div class="st"><small>Coin vs same program</small><b id="coin">--</b><span>Tap below to run it</span></div>
     </div>
     <p class="note" id="pattern"></p>
+    <div class="plain">
+      <h3>What this means, in plain English</h3>
+      <div id="plain"></div>
+    </div>
     <div class="row">
       <button class="btn ghost" id="coinBtn">Let a coin play</button>
       <button class="btn" id="again">Play again</button>
@@ -240,28 +248,47 @@ details p b,.sci b{font-weight:500}
     $("chart").innerHTML=g}
 
   var coinRun=null;
+  var lastT=null;
+  function plain(t,coinPct){
+    var pct=Math.round(t.hits/t.n*100),band=Math.round(50+1.96*50/Math.sqrt(N)),p=tailP(t.hits,t.n),out=[];
+    if(pct>=band)out.push("<b>The short version.</b> The program guessed your next tap "+t.hits+" times out of "+t.n+". Guessing blindly, it would get about 50. So your taps weren't as random as they felt. You had habits, and it learned them.");
+    else if(pct>50)out.push("<b>The short version.</b> The program guessed "+t.hits+" of your "+t.n+" taps. That's a little better than blind guessing, but luck alone can produce a score like that. You were hard to read this time.");
+    else out.push("<b>The short version.</b> The program guessed only "+t.hits+" of your "+t.n+" taps, no better than blind guessing. It couldn't find a pattern in you this time.");
+    var where=pct>=band?"ends above the gray area, so the program wasn't just lucky. It found real patterns.":(pct>=Math.round(50-1.96*50/Math.sqrt(N))?"ends inside the gray area, so its score could be luck.":"ends below the gray area, which is unusual. You may have been steering away from your own habits.");
+    out.push("<b>Reading the chart.</b> The red line is the program's score on you as the game went on. The gray area shows where its score would land 95 times out of 100 against a real coin. It starts wide because early on, a few lucky guesses swing the score a lot. It narrows as the taps add up. Your red line "+where);
+    if(pct>50)out.push("<b>The odds.</b> Against a real coin, the program would score this high "+oneIn(p)+". That's a way of asking: how often would pure luck do this well? The rarer it is, the surer you can be that the program really read you.");
+    var sw=Math.round(t.swr*100);
+    out.push("<b>Switching, "+sw+"%.</b> You switched sides on "+sw+"% of your taps. A coin switches about half the time. "+(sw>=60?"You switched more, which is the most common human habit. Repeating the same side feels un-random, so people avoid it. A coin doesn't care.":(sw<=40?"You repeated more than a coin would. Less common, but still a habit the program can use.":"That's close to a coin, so switching wasn't your tell.")));
+    out.push("<b>Your longest streak, "+t.best+".</b> That's the most times in a row you tapped the same side. In 100 coin flips, the longest streak is usually 5 to 10. "+(t.best<=4?"Yours was shorter, which means you were breaking up runs before they got long. Real randomness has longer streaks than people expect.":(t.best>10?"Yours was longer than usual, which is less common but still a pattern.":"Yours was in the normal range, so streaks weren't your tell.")));
+    var l=t.left,r=t.n-t.left;if(Math.max(l,r)>=60)out.push("<b>Left vs right, "+l+"/"+r+".</b> You favored one side. The program can bet on that alone.");
+    out.push(coinPct===null?"<b>Try the comparison.</b> Tap \"Let a coin play\" below. The same program plays 100 taps against a real coin, and you'll see what an unreadable player scores.":"<b>The coin's score, "+coinPct+"%.</b> The same program, playing a real coin, scored "+coinPct+"%. That's what unreadable looks like. On the chart, the gray line is the coin and the red line is you.");
+    out.push("<b>Why it matters.</b> Any time you try to be unpredictable, the same habits show up. Passwords and PINs people make up. Rock, paper, scissors. When a pitcher or a poker player tries to mix it up. If being unpredictable really matters, don't trust your gut. Use a real random source, like a coin flip or a dice app.");
+    return out.map(function(x){return "<p>"+x+"</p>"}).join("");
+  }
   function results(){
     var t=stats(S),pct=Math.round(t.hits/t.n*100),p=tailP(t.hits,t.n),band=Math.round(50+1.96*50/Math.sqrt(N));
     $("verdict").textContent=pct>=band?"It read you. It guessed "+pct+"% of your taps.":(pct>50?"Close. It guessed "+pct+"% of your taps.":"You beat it. It guessed only "+pct+"% of your taps.");
     $("meaning").textContent=pct>50?("A coin would let it score this high "+oneIn(p)+". "+(pct>=band?"So this isn't luck. You have patterns it found.":"That's within the range luck can produce, so this run doesn't prove a pattern.")):"That's at or below chance. With its short memory, it couldn't find a pattern in this run.";
     $("swr").textContent=Math.round(t.swr*100)+"%";$("run").textContent=String(t.best);
     $("bal").textContent=t.left+"/"+(t.n-t.left);
-    var notes=[],swp=Math.round(t.swr*100);
-    if(swp>=60)notes.push("You switched "+swp+"% of the time. That's the classic human pattern: too much switching to be random.");
-    else if(swp<=40)notes.push("You repeated more than a coin would. Less common, but still a pattern it can use.");
+    var notes=[];
+    if(t.swr>=0.6)notes.push("You switched "+Math.round(t.swr*100)+"% of the time. That's the classic human pattern: too much switching to be random.");
+    else if(t.swr<=0.4)notes.push("You repeated more than a coin would. Less common, but still a pattern it can use.");
     if(t.best<=4)notes.push("Your longest streak was only "+t.best+". A coin goes 4 or fewer in a row only about 3% of the time, so you were avoiding streaks.");
     $("pattern").textContent=notes.join(" ")||"Your switching and streaks looked like a coin's this run.";
-    coinRun=null;$("coin").textContent="--";$("coinNote").textContent="Tap below to run it";$("coinKey").hidden=true;$("coinBtn").disabled=false;
+    coinRun=null;$("coin").textContent="--";$("coinKey").hidden=true;$("coinBtn").disabled=false;
     chart([{hit:S.hit,color:"var(--bot)",w:2.5}]);
+    lastT=t;$("plain").innerHTML=plain(t,null);
     $("results").hidden=false;
     save({d:Date.now(),p:pct,s:Math.round(t.swr*100),b:t.best});
     $("results").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}
 
   $("coinBtn").addEventListener("click",function(){
     coinRun=fresh();for(var i=0;i<N;i++)play(coinRun,Math.random()<.5?"L":"R");
-    var c=stats(coinRun);$("coin").textContent=Math.round(c.hits/N*100)+"%";$("coinNote").textContent="Its guess rate on random coin taps";$("coinKey").hidden=false;
+    var c=stats(coinRun);$("coin").textContent=Math.round(c.hits/N*100)+"%";$("coinKey").hidden=false;
     chart([{hit:coinRun.hit,color:"var(--muted)",w:1.5},{hit:S.hit,color:"var(--bot)",w:2.5}]);
-    $("coinBtn").textContent="Run the coin again"});
+    $("coinBtn").textContent="Run the coin again";
+    if(lastT)$("plain").innerHTML=plain(lastT,Math.round(c.hits/N*100))});
 
   function load(){try{return JSON.parse(localStorage.getItem("beatpredictor.runs")||"[]")}catch(e){return []}}
   function save(r){var a=load();a.unshift(r);a=a.slice(0,20);try{localStorage.setItem("beatpredictor.runs",JSON.stringify(a))}catch(e){}hist(a)}
